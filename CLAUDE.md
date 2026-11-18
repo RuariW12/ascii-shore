@@ -29,13 +29,14 @@ The project lives in Downloads, **nested one level** (Windows "Extract All" crea
 C:\Users\rxwha\Downloads\ascii-shore-home\ascii-shore-home\
 ```
 
-Firefox points at the built file:
+GitHub: https://github.com/RuariW12/ascii-shore (public). Firefox points at the
+GitHub Pages site, which redeploys automatically on every push to `main`:
 
 ```
-file:///C:/Users/rxwha/Downloads/ascii-shore-home/ascii-shore-home/dist/index.html
+https://ruariw12.github.io/ascii-shore/
 ```
 
-Don't move/rename this folder without updating Firefox's settings (see Deployment).
+`gh` is installed at `C:\Program Files\GitHub CLI\gh.exe` (may not be on PATH in old terminals).
 
 ---
 
@@ -65,12 +66,9 @@ ascii-shore-home/
 ├─ package.json
 ├─ src/
 │  ├─ main.jsx                ← createRoot(...).render(<AsciiShore />)
-│  ├─ AsciiShore.jsx          ← EVERYTHING: scene, UI, styles (~1150 lines)
-│  └─ firefox-logo.svg        ← PLACEHOLDER (neutral circle); user swaps in real logo
-├─ firefox-newtab/
-│  ├─ autoconfig.js           ← for Option B new-tab setup (LF line endings!)
-│  └─ autoconfig.cfg          ← path must be edited to the dist/index.html above
-└─ dist/index.html            ← build output Firefox loads
+│  └─ AsciiShore.jsx          ← EVERYTHING: scene, UI, styles (~1200 lines)
+├─ .github/workflows/deploy.yml ← builds + publishes dist/ to GitHub Pages on push
+└─ dist/index.html            ← build output (gitignored; Pages builds its own)
 ```
 
 ---
@@ -190,11 +188,9 @@ amplitude × lateral window. Tuning knobs: `period`, `jitter`, `reach`, `skip`, 
 
 - Positioned at `top: 17vh`, centered, inside the sky area.
 - **Greeting** like a blank Claude chat: serif (Iowan Old Style / Palatino / Georgia),
-  `[logo] Good afternoon, Ruari`. Uses the **real clock** (not the scene's time slider):
-  5–11 morning, 12–16 afternoon, 17–23 evening, 0–4 "Hello, night owl". Updates every 30 s.
-- **Logo**: `import logoUrl from "./firefox-logo.svg"` so Vite inlines it into the single
-  file. Hidden automatically if it fails to load. **Do not draw/recreate the Firefox logo
-  in code** — the user supplies the official SVG and replaces the placeholder file.
+  centered text only (**logo removed by request**). Random pick per page load from
+  `GREETINGS[period]` (Claude Code–style variety); periods from the **live Eastern clock**:
+  5–11 morning, 12–16 afternoon, 17–22 evening, 23–4 night.
 - **Search bubble**: frosted glass (`backdrop-filter: blur(14px) saturate(115%)`, 7% white
   fill, 1px translucent border), pill shape, 54 px tall, `min(680px, 88vw)` wide; magnifier
   icon (generic, hand-made SVG); `↵` hint appears while typing; `autoFocus`.
@@ -209,35 +205,26 @@ amplitude × lateral window. Tuning knobs: `period`, `jitter`, `reach`, `skip`, 
 - Sliders: **wave speed** (0–3×), **reflection** (0–200%: ripple highlights, glints, sun
   path, wet-sand sheen), **time** (0–23, one step per hour; track shows the day's sky
   colors; label shows e.g. "6 PM" + "sunset"). Reset button.
-- Settings `{speed, reflect, hour, open}` persist in `localStorage[STORAGE_KEY]`
-  (wrapped in try/catch). Note: the home page (file://) and New Tab Override's stored copy
-  have **separate** storage, so settings may differ between them.
-- Default hour is 22 (night) — the original vibe.
+- **Live time**: the scene follows the real time in `TIME_ZONE` ("America/New_York", DST via
+  `Intl`) as a fractional hour (`liveHourNow`), refreshed every 30 s and on tab visibility.
+  The time slider is a temporary **manual override** (`manualHour`, not persisted) with a
+  "back to live" link; reset also returns to live.
+- Settings `{speed, reflect, open}` persist in `localStorage[STORAGE_KEY]` (try/catch).
 
 ---
 
 ## Deployment to Firefox (Windows 11)
 
-After any change: `npm run build`, then:
+After any change: commit and `git push` — the Actions workflow builds and deploys to
+https://ruariw12.github.io/ascii-shore/ in ~1 min (check with `gh run list`).
 
-- **Home page / new windows**: `about:preferences#home` → *Homepage and new windows* →
-  *Custom URLs…* → the `file:///…/dist/index.html` path above. Picks up rebuilds automatically.
-- **New tabs** (Firefox can't natively point new tabs at a local file):
-  - **Option A — New Tab Override add-on**: type *Local file* → import `dist/index.html`;
-    enable "focus the website instead of the address bar". It stores a **copy**, so
-    **re-import after every rebuild**.
-  - **Option B — autoconfig** (reads the file live): copy `firefox-newtab/autoconfig.cfg` to
-    `C:\Program Files\Mozilla Firefox\` and `firefox-newtab/autoconfig.js` to
-    `C:\Program Files\Mozilla Firefox\defaults\pref\` (admin). Edit the path in the .cfg.
-    Both files must start with a `//` comment line and `autoconfig.js` must use **LF** line
-    endings. Uses `ChromeUtils.importESModule("resource:///modules/AboutNewTab.sys.mjs")`
-    (the old `AboutNewTab.jsm` form broke in Firefox 136). Fully restart Firefox after changes.
-    With this option, focus starts in the address bar.
+- **Home page / new windows**: `about:preferences#home` → *Custom URLs…* → the Pages URL.
+- **New tabs**: New Tab Override add-on, type *Custom URL* → the Pages URL (updates live,
+  no re-import). Enable "focus the website instead of the address bar".
 
 ### Why single-file
 
-`file://` pages can't reliably load separate module scripts/assets, and New Tab Override
-only stores one HTML file. `vite-plugin-singlefile` inlines JS, CSS, and the SVG logo.
+Originally for `file://` loading; still kept so the page is one self-contained request.
 **Keep the build single-file**: don't add runtime fetches of local files, external fonts
 that are required to render, or assets referenced by path (import them so Vite inlines them).
 
@@ -278,7 +265,6 @@ that are required to render, or assets referenced by path (import them so Vite i
 
 ## Ideas not yet done (only if asked)
 
-- "Live" mode: scene time follows the real clock (greeting already does).
 - Moon phase or shooting stars at night (moon was removed once — ask first).
 - Quick links / bookmarks row under the search bar.
 - Keyboard shortcut (e.g. `/`) to focus the search bubble when focus starts in the URL bar.
