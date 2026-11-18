@@ -15,6 +15,7 @@ const STORAGE_KEY = "ascii-shore-settings";
 
 const FONT_SIZE = 13;
 const LINE_HEIGHT = 1.1;
+const MAX_FPS = 30; // ASCII motion moves in whole cells, so 30 fps looks the same as 60+ at half the CPU
 
 // wave timing (seconds at 1x speed)
 const TRAVEL = 9.5; // base horizon -> shore time
@@ -564,6 +565,9 @@ export default function AsciiShore() {
     };
 
     const frame = (ms) => {
+      raf = requestAnimationFrame(frame);
+      // frame cap: skip rAF ticks until enough time has passed (small slack for timer jitter)
+      if (last !== null && ms - last < 1000 / MAX_FPS - 2) return;
       const { speed: spd, reflect: R, hour: target } = params.current;
       const dt = last === null ? 0 : Math.min(0.05, (ms - last) / 1000);
       last = ms;
@@ -1012,7 +1016,9 @@ export default function AsciiShore() {
       waterG.addColorStop(0, css(L.wBgFar));
       waterG.addColorStop(1, css(L.wBgNear));
       ctx.fillStyle = waterG;
-      for (let x = 0; x < cols; x++) ctx.fillRect(x * cw, skyH, cw + 0.6, (edge[x] - H) * ch);
+      ctx.beginPath();
+      for (let x = 0; x < cols; x++) ctx.rect(x * cw, skyH, cw + 0.6, (edge[x] - H) * ch);
+      ctx.fill();
 
       ctx.fillStyle = css(L.wetBg);
       for (let x = 0; x < cols; x++) {
@@ -1030,8 +1036,6 @@ export default function AsciiShore() {
         ctx.fillStyle = palette[i];
         for (let j = 0; j < b.length; j += 3) ctx.fillText(b[j], b[j + 1], b[j + 2]);
       }
-
-      raf = requestAnimationFrame(frame);
     };
 
     resize();
